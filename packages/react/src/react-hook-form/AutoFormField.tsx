@@ -5,6 +5,7 @@ import { useAutoForm } from "../context";
 import { useFieldError } from "./hooks";
 import { ArrayField } from "./ArrayField";
 import { ObjectField } from "./ObjectField";
+import { DiscriminatedUnionField } from "./DiscriminatedUnionField";
 import type { AutoFormFieldProps } from "../types";
 
 export const AutoFormField: React.FC<{
@@ -23,6 +24,8 @@ export const AutoFormField: React.FC<{
     FieldComponent = ArrayField;
   } else if (parsedField.type === "object") {
     FieldComponent = ObjectField;
+  } else if (parsedField.type === "discriminated-union") {
+    FieldComponent = DiscriminatedUnionField;
   } else if (parsedField.type in formComponents) {
     FieldComponent =
       formComponents[parsedField.type as keyof typeof formComponents]!;

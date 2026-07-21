@@ -9,6 +9,7 @@ export function inferFieldType(
     return fieldConfig.fieldType;
   }
 
+  if (schema instanceof z.ZodDiscriminatedUnion) return "discriminated-union";
   if (schema instanceof z.ZodObject) return "object";
   if (schema instanceof z.ZodString) return "string";
   if (schema instanceof z.ZodNumber) return "number";

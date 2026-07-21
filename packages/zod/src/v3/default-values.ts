@@ -6,6 +6,13 @@ export function getDefaultValueInZodStack(schema: z.ZodTypeAny): any {
     return schema._def.defaultValue();
   }
 
+  if (schema instanceof z.ZodDiscriminatedUnion) {
+    const discriminator = schema._def.discriminator as string;
+    const option = schema._def.options[0] as z.AnyZodObject;
+    const literal = option._def.shape()[discriminator] as z.ZodLiteral<any>;
+    return { ...getDefaultValues(option), [discriminator]: literal._def.value };
+  }
+
   if (schema instanceof z.ZodEffects) {
     return getDefaultValueInZodStack(schema.innerType());
   }

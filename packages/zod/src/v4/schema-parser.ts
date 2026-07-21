@@ -32,6 +32,28 @@ function parseField(key: string, schema: z.$ZodType): ParsedField {
     subSchema = [parseField("0", baseSchema._zod.def.element as z.$ZodType)];
   }
 
+  // Discriminated unions
+  let discriminator: string | undefined;
+  let branches: Record<string, ParsedField[]> | undefined;
+  if (baseSchema instanceof z.$ZodDiscriminatedUnion) {
+    discriminator = baseSchema._zod.def.discriminator;
+    branches = {};
+    const branchOptions: [string, string][] = [];
+    for (const option of baseSchema._zod.def.options as z.$ZodObject[]) {
+      const shape = option._zod.def.shape;
+      const fields = Object.entries(shape)
+        .filter(([fieldKey]) => fieldKey !== discriminator)
+        .map(([fieldKey, field]) => parseField(fieldKey, field as z.$ZodType));
+      for (const value of getDiscriminatorValues(
+        shape[discriminator] as z.$ZodType,
+      )) {
+        branches[value] = fields;
+        branchOptions.push([value, value]);
+      }
+    }
+    optionValues = branchOptions;
+  }
+
   return {
     key,
     type,
@@ -41,6 +63,8 @@ function parseField(key: string, schema: z.$ZodType): ParsedField {
     fieldConfig,
     options: optionValues,
     schema: subSchema,
+    discriminator,
+    branches,
   };
 }
 
@@ -91,4 +115,22 @@ function getDescription<SchemaType extends z.$ZodType>(
   }
 
   return undefined;
+}
+
+function getDiscriminatorValues(schema: z.$ZodType): string[] {
+  const def = schema._zod.def as {
+    type: string;
+    values?: unknown[];
+    entries?: Record<string, unknown> | unknown[];
+  };
+  if (def.type === "literal") {
+    return (def.values ?? []).map(String);
+  }
+  if (def.type === "enum" && def.entries) {
+    const entries = def.entries;
+    return (Array.isArray(entries) ? entries : Object.values(entries)).map(
+      String,
+    );
+  }
+  return [];
 }

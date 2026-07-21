@@ -5,6 +5,14 @@ export function getDefaultValueInZodStack(schema: z.$ZodType): any {
     return schema._zod.def.defaultValue;
   }
 
+  if (schema instanceof z.$ZodDiscriminatedUnion) {
+    const { discriminator, options } = schema._zod.def;
+    const option = options[0] as z.$ZodObject;
+    const literal = (option._zod.def.shape[discriminator] as z.$ZodType)._zod
+      .def as { values?: unknown[] };
+    return { ...getDefaultValues(option), [discriminator]: literal.values?.[0] };
+  }
+
   if (schema instanceof z.$ZodObject) {
     return getDefaultValues(schema);
   }

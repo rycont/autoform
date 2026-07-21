@@ -56,6 +56,12 @@ export interface ParsedField<AdditionalRenderable = null, FieldTypes = string> {
   options?: [string, string][]; // [value, label] for enums
   /** Child fields for object fields, or the item schema for array fields. */
   schema?: ParsedField<AdditionalRenderable, FieldTypes>[]; // For objects and arrays
+
+  // Discriminated unions
+  /** Discriminator field key for discriminated-union fields. */
+  discriminator?: string;
+  /** Child fields keyed by discriminator value for discriminated-union fields. */
+  branches?: Record<string, ParsedField<AdditionalRenderable, FieldTypes>[]>;
 }
 
 export interface ParsedSchema<

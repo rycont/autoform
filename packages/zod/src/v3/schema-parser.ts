@@ -33,6 +33,30 @@ function parseField(key: string, schema: z.ZodTypeAny): ParsedField {
     subSchema = [parseField("0", baseSchema._def.type)];
   }
 
+  // Discriminated unions
+  let discriminator: string | undefined;
+  let branches: Record<string, ParsedField[]> | undefined;
+  if (baseSchema instanceof z.ZodDiscriminatedUnion) {
+    discriminator = baseSchema._def.discriminator;
+    branches = {};
+    const branchOptions: [string, string][] = [];
+    for (const option of baseSchema._def.options as z.AnyZodObject[]) {
+      const shape = option._def.shape();
+      const fields = Object.entries(shape)
+        .filter(([fieldKey]) => fieldKey !== discriminator)
+        .map(([fieldKey, field]) =>
+          parseField(fieldKey, field as z.ZodTypeAny),
+        );
+      for (const value of getDiscriminatorValues(
+        shape[discriminator] as z.ZodTypeAny,
+      )) {
+        branches[value] = fields;
+        branchOptions.push([value, value]);
+      }
+    }
+    optionValues = branchOptions;
+  }
+
   return {
     key,
     type,
@@ -42,6 +66,8 @@ function parseField(key: string, schema: z.ZodTypeAny): ParsedField {
     fieldConfig,
     options: optionValues,
     schema: subSchema,
+    discriminator,
+    branches,
   };
 }
 
@@ -56,6 +82,19 @@ function getBaseSchema<
   }
 
   return schema as ChildType;
+}
+
+function getDiscriminatorValues(schema: z.ZodTypeAny): string[] {
+  if (schema instanceof z.ZodLiteral) {
+    return [String(schema._def.value)];
+  }
+  if (schema instanceof z.ZodEnum) {
+    return schema._def.values.map(String);
+  }
+  if (schema instanceof z.ZodNativeEnum) {
+    return Object.values(schema._def.values).map(String);
+  }
+  return [];
 }
 
 export function parseSchema(schema: ZodObjectOrWrapped): ParsedSchema {
